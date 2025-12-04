@@ -9,10 +9,10 @@
     <!-- Подключаем Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Подключаем CSS файлы -->
+    <!-- Подключаем CSS -->
     <link rel="stylesheet" href="styles.css">
     
-    <!-- Для иконок можно добавить Font Awesome (опционально) -->
+    <!-- Подключаем Font Awesome для иконок -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -50,7 +50,7 @@
                         <div class="form-group">
                             <label class="form-label" for="email">Email</label>
                             <input type="email" class="form-control" id="email" required
-                                   placeholder="ваш-email@example.com">
+                                   placeholder="admin@bar.com">
                         </div>
                         
                         <div class="form-group">
@@ -64,11 +64,13 @@
                         </button>
                     </form>
                     
-                    <!-- Убрали тестовые аккаунты из HTML -->
-                    <div style="margin-top: 20px; text-align: center;">
-                        <button class="btn btn-sm btn-secondary" onclick="showResetPassword()">
-                            Забыли пароль?
-                        </button>
+                    <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <h3 style="font-size: 14px; color: #666; margin-bottom: 10px;">Тестовые аккаунты:</h3>
+                        <div style="font-size: 12px; color: #666; line-height: 1.6;">
+                            <div><strong>Админ:</strong> admin@bar.com / Admin123</div>
+                            <div><strong>Бармены (Бар 1):</strong> barman1@bar.com / Barman123</div>
+                            <div><strong>Бармены (Бар 2):</strong> barman3@bar.com / Barman123</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -92,9 +94,6 @@
                     <button class="btn btn-secondary" onclick="exportData()">
                         <span>📥</span> Экспорт CSV
                     </button>
-                    <button class="btn btn-warning" onclick="openUserManagement()" id="userManagementBtn" style="display: none;">
-                        <span>👥</span> Управление пользователями
-                    </button>
                 </div>
                 
                 <!-- СТАТИСТИКА -->
@@ -117,23 +116,6 @@
                     </div>
                 </div>
                 
-                <!-- ФИЛЬТРЫ -->
-                <div class="filter-panel" id="filterPanel" style="margin-bottom: 20px; display: none;">
-                    <select id="categoryFilter" class="form-control" style="max-width: 200px;" onchange="applyFilters()">
-                        <option value="">Все категории</option>
-                    </select>
-                    <select id="barFilter" class="form-control" style="max-width: 150px;" onchange="applyFilters()">
-                        <option value="">Все бары</option>
-                        <option value="bar1">Бар 1</option>
-                        <option value="bar2">Бар 2</option>
-                    </select>
-                    <select id="stockFilter" class="form-control" style="max-width: 200px;" onchange="applyFilters()">
-                        <option value="">Все остатки</option>
-                        <option value="low">Низкий запас</option>
-                        <option value="zero">Нет в наличии</option>
-                    </select>
-                </div>
-                
                 <!-- ПОИСК -->
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="🔍 Введите название продукта для поиска...">
@@ -150,25 +132,17 @@
                     <table id="stockTable">
                         <thead>
                             <tr>
-                                <th style="width: 35%;">Наименование</th>
-                                <th style="width: 15%;">Категория</th>
-                                <th style="width: 12%;">Объем, мл</th>
-                                <th style="width: 17%;">Бар 1 (факт)</th>
-                                <th style="width: 17%;">Бар 2 (факт)</th>
-                                <th style="width: 4%;" id="actionsHeader"></th>
+                                <th style="width: 40%;">Наименование</th>
+                                <th style="width: 15%;">Объем, мл</th>
+                                <th style="width: 20%;">Бар 1 (факт)</th>
+                                <th style="width: 20%;">Бар 2 (факт)</th>
+                                <th style="width: 5%;" id="actionsHeader"></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
                             <!-- Данные загружаются динамически -->
                         </tbody>
                     </table>
-                </div>
-                
-                <!-- ПАГИНАЦИЯ -->
-                <div class="pagination" id="pagination" style="margin-top: 20px; display: none;">
-                    <button id="prevBtn" onclick="changePage(-1)" disabled>◀ Назад</button>
-                    <span id="pageInfo">Страница 1 из 1</span>
-                    <button id="nextBtn" onclick="changePage(1)" disabled>Вперед ▶</button>
                 </div>
             </div>
         </div>
@@ -203,64 +177,31 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО СБРОСА ПАРОЛЯ -->
-    <div class="modal" id="resetPasswordModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Восстановление пароля</div>
-                <button class="close-modal" onclick="closeResetPassword()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">Введите ваш email</label>
-                    <input type="email" class="form-control" id="resetEmail" 
-                           placeholder="email@example.com">
-                </div>
-                <div class="alert" id="resetAlert"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeResetPassword()">Отмена</button>
-                <button class="btn btn-primary" onclick="sendResetPassword()">Отправить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ -->
-    <div class="modal" id="userManagementModal">
-        <div class="modal-content" style="max-width: 700px;">
-            <div class="modal-header">
-                <div class="modal-title">👥 Управление пользователями</div>
-                <button class="close-modal" onclick="closeUserManagement()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="alert" id="userManagementAlert"></div>
-                <div class="form-group">
-                    <button class="btn btn-success" onclick="openAddUserModal()">
-                        <span>➕</span> Добавить пользователя
-                    </button>
-                </div>
-                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Имя</th>
-                                <th>Email</th>
-                                <th>Роль</th>
-                                <th>Бар</th>
-                                <th>Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody id="userManagementTable">
-                            <!-- Список пользователей -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Подключаем JavaScript отдельно -->
+    <!-- Подключаем конфигурацию -->
     <script src="config.js"></script>
+    
+    <!-- Подключаем основное приложение -->
     <script src="app.js"></script>
+    
+    <!-- Инициализация после загрузки -->
+    <script>
+        // Убедимся, что все загрузилось
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM загружен');
+            });
+        } else {
+            console.log('DOM уже загружен');
+        }
+        
+        // Глобальная обработка ошибок
+        window.addEventListener('error', function(e) {
+            console.error('Глобальная ошибка:', e.error);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Необработанный Promise:', e.reason);
+        });
+    </script>
 </body>
 </html>
