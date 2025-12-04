@@ -6,6 +6,7 @@
     <title>🍸 Fuller Pub - Учет стоков</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍸</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js" defer></script>
     <style>
         /* ОСНОВНЫЕ СТИЛИ */
         :root {
@@ -682,13 +683,11 @@
 
     <script>
         // ==================== КОНФИГУРАЦИЯ ====================
-// Прямые значения (замените на ваши)
-const SUPABASE_URL = 'https://lmysveosqckpbyuldiym.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteXN2ZW9zcWNrcGJ5dWxkaXltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTMxNTksImV4cCI6MjA4MDM4OTE1OX0.z1i_Fi7uCXnX3cml7RbTHR6RxIrxVY947iOCTi80fQY';
-
-// Инициализация Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
+        // Данные берутся из config.js
+        const supabase = window.supabase.createClient(
+            window.SUPABASE_CONFIG.URL,
+            window.SUPABASE_CONFIG.KEY
+        );
         
         // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
         let currentUser = null;
@@ -714,249 +713,88 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             
             showLoader(false);
         }
-        // ==================== ИСПРАВЛЕННАЯ ЗАГРУЗКА ПРОФИЛЯ ====================
-async function loadUserProfile(userId) {
-    console.log('🔍 Загружаю профиль для:', userId);
-    
-    try {
-        // Пробуем загрузить профиль
-        const { data: profile, error } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
         
-        if (error) {
-            console.log('Профиль не найден, создаю новый...', error.message);
-            
-            // Получаем email пользователя
-            const { data: { user } } = await supabase.auth.getUser();
-            
-            if (!user) {
-                throw new Error('Пользователь не найден');
-            }
-            
-            // Создаем профиль
-            const newProfile = await createUserProfile(userId, user.email);
-            
-            if (!newProfile) {
-                throw new Error('Не удалось создать профиль');
-            }
-            
-            // Устанавливаем значения по умолчанию
-            currentUser = newProfile;
-            userRole = 'barman'; // По умолчанию бармен
-            userBar = 1; // По умолчанию бар 1
-            
-            console.log('✅ Создан профиль по умолчанию');
-            
-        } else {
-            // Профиль найден
-            currentUser = profile;
-            
-            // Определяем роль
-            if (profile.role_id === 1) {
-                userRole = 'admin';
-            } else {
-                userRole = 'barman';
-            }
-            
-            userBar = profile.bar_number || 1;
-            
-            console.log('✅ Профиль загружен:', {
-                email: profile.email,
-                role: userRole,
-                bar: userBar
-            });
-        }
-        
-        updateUserUI();
-        
-    } catch (error) {
-        console.error('❌ Ошибка загрузки профиля:', error);
-        
-        // Резервный вариант - создаем временный профиль
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            
-            if (user) {
-                currentUser = {
-                    id: userId,
-                    email: user.email,
-                    full_name: user.email.split('@')[0]
-                };
-                userRole = 'barman';
-                userBar = 1;
+        // Загрузка профиля пользователя
+        async function loadUserProfile(userId) {
+            try {
+                const { data: profile, error } = await supabase
+                    .from('user_profiles')
+                    .select(`
+                        *,
+                        user_roles (name)
+                    `)
+                    .eq('id', userId)
+                    .single();
+                
+                if (error) throw error;
+                
+                currentUser = profile;
+                userRole = profile.user_roles.name;
+                userBar = profile.bar_number || 1;
+                
                 updateUserUI();
-            }
-        } catch (e) {
-            console.error('Резервный вариант не сработал:', e);
-            showAlert('Ошибка загрузки профиля. Попробуйте перезайти.', 'error');
-            await logout();
-        }
-    }
-}
-
-// ==================== ИСПРАВЛЕННОЕ СОЗДАНИЕ ПРОФИЛЯ ====================
-async function createUserProfile(userId, userEmail) {
-    console.log('📝 Создаю профиль для:', userEmail);
-    
-    try {
-        // Пробуем создать профиль через API
-        const { data, error } = await supabase
-            .from('user_profiles')
-            .insert([{
-                id: userId,
-                email: userEmail,
-                full_name: userEmail.split('@')[0],
-                role_id: 2, // По умолчанию бармен
-                bar_number: 1
-            }])
-            .select()
-            .single();
-        
-        if (error) {
-            console.error('Ошибка создания профиля:', error);
-            
-            // Если ошибка RLS, пробуем альтернативный способ
-            if (error.code === '42501') {
-                console.log('Пробую альтернативный метод...');
                 
-                // Возвращаем объект профиля без сохранения в БД
-                return {
-                    id: userId,
-                    email: userEmail,
-                    full_name: userEmail.split('@')[0],
-                    role_id: 2,
-                    bar_number: 1
-                };
+            } catch (error) {
+                console.error('Ошибка загрузки профиля:', error);
+                // Создаем профиль по умолчанию
+                await createUserProfile(userId);
+                await loadUserProfile(userId); // Перезагружаем
             }
-            return null;
         }
         
-        console.log('✅ Профиль создан в БД');
-        return data;
-        
-    } catch (error) {
-        console.error('Критическая ошибка создания профиля:', error);
-        return null;
-    }
-}
-        // ==================== ПРОВЕРКА ДОСТУПА ====================
-async function checkDatabaseAccess() {
-    console.log('🔧 Проверка доступа к базе...');
-    
-    try {
-        // Проверяем таблицу categories
-        const { data: cats, error: catError } = await supabase
-            .from('categories')
-            .select('count')
-            .limit(1);
-        
-        if (catError) {
-            console.warn('⚠️ Нет доступа к categories:', catError.message);
-        } else {
-            console.log('✅ Доступ к categories есть');
-        }
-        
-        // Проверяем таблицу user_profiles
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-            const { error: profileError } = await supabase
+        // Создание профиля при первом входе
+        async function createUserProfile(userId) {
+            const { data: user } = await supabase.auth.getUser();
+            
+            if (!user) return;
+            
+            const { error } = await supabase
                 .from('user_profiles')
-                .select('id')
-                .eq('id', user.id)
-                .maybeSingle();
+                .insert([{
+                    id: userId,
+                    email: user.user.email,
+                    full_name: user.user.email.split('@')[0],
+                    role_id: 2, // По умолчанию бармен
+                    bar_number: 1
+                }]);
             
-            if (profileError && profileError.code === '42501') {
-                console.error('❌ ОШИБКА RLS! Нужно исправить политики в Supabase');
-                showAlert('Ошибка доступа к базе. Нужно настроить политики безопасности.', 'error');
+            if (error) {
+                console.error('Ошибка создания профиля:', error);
             }
         }
         
-    } catch (error) {
-        console.error('Ошибка проверки доступа:', error);
-    }
-}
-       // Вход в систему (ИСПРАВЛЕННЫЙ)
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const btn = document.getElementById('loginBtn');
-    const alert = document.getElementById('loginAlert');
-    
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Вход...';
-    
-    console.log('🔐 Попытка входа:', email);
-    
-    try {
-        // 1. Авторизация
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password
+        // Вход в систему
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const alert = document.getElementById('loginAlert');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader-spinner" style="width: 20px; height: 20px; border-width: 2px;"></div> Загрузка...';
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                await loadUserProfile(data.user.id);
+                showMainInterface();
+                
+                showAlert('✅ Успешный вход! Добро пожаловать в систему.', 'success', alert);
+                
+            } catch (error) {
+                showAlert(`❌ Ошибка входа: ${error.message}`, 'error', alert);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔑 Войти в систему';
+            }
         });
-        
-        if (error) {
-            // Пробуем стандартные пароли если обычный не работает
-            if (error.message.includes('Invalid login credentials')) {
-                console.log('Пробую альтернативные пароли...');
-                
-                // Пробуем войти с разными паролями
-                const testPasswords = ['Test123', 'test123', 'Password123', 'password123'];
-                
-                for (const testPass of testPasswords) {
-                    try {
-                        const { data: testData, error: testError } = await supabase.auth.signInWithPassword({
-                            email: email,
-                            password: testPass
-                        });
-                        
-                        if (!testError) {
-                            console.log(`✅ Найден пароль: ${testPass}`);
-                            data = testData;
-                            break;
-                        }
-                    } catch (e) {
-                        continue;
-                    }
-                }
-                
-                if (!data) {
-                    throw new Error('Неверный email или пароль. Попробуйте: Test123');
-                }
-            } else {
-                throw error;
-            }
-        }
-        
-        console.log('✅ Авторизация успешна');
-        
-        // 2. Загрузка профиля (с упрощенной логикой)
-        await loadUserProfile(data.user.id);
-        
-        // 3. Показ интерфейса
-        showMainInterface();
-        
-        showAlert(`✅ Добро пожаловать, ${currentUser?.email || email}!`, 'success', alert);
-        
-    } catch (error) {
-        let errorMessage = error.message;
-        
-        if (errorMessage.includes('Invalid login credentials')) {
-            errorMessage = 'Неверный email или пароль. Попробуйте: Test123';
-        }
-        
-        showAlert(`❌ ${errorMessage}`, 'error', alert);
-        console.error('Ошибка входа:', error);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '🔑 Войти в систему';
-    }
-});
         
         // Выход из системы
         async function logout() {
