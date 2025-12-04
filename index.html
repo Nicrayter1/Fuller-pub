@@ -11,13 +11,10 @@
     
     <!-- Подключаем CSS -->
     <link rel="stylesheet" href="styles.css">
-    
-    <!-- Подключаем Font Awesome для иконок -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <!-- ШАПКА (видна только после входа) -->
+        <!-- ШАПКА -->
         <div class="app-header" id="appHeader" style="display: none;">
             <div class="app-title">
                 <span style="font-size: 28px;">🍸</span>
@@ -148,60 +145,32 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ -->
+    <!-- МОДАЛЬНЫЕ ОКНА -->
     <div class="modal" id="addModal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="addModalTitle">Добавить</div>
                 <button class="close-modal" onclick="closeAddModal()">×</button>
             </div>
-            <div class="modal-body" id="addModalBody">
-                <!-- Контент добавляется динамически -->
-            </div>
+            <div class="modal-body" id="addModalBody"></div>
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ИНФОРМАЦИИ -->
     <div class="modal" id="infoModal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="infoModalTitle">Информация</div>
                 <button class="close-modal" onclick="closeInfoModal()">×</button>
             </div>
-            <div class="modal-body" id="infoModalBody">
-                <!-- Контент добавляется динамически -->
-            </div>
+            <div class="modal-body" id="infoModalBody"></div>
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="closeInfoModal()">OK</button>
             </div>
         </div>
     </div>
 
-    <!-- Подключаем конфигурацию -->
+    <!-- Подключаем файлы -->
     <script src="config.js"></script>
-    
-    <!-- Подключаем основное приложение -->
     <script src="app.js"></script>
-    
-    <!-- Инициализация после загрузки -->
-    <script>
-        // Убедимся, что все загрузилось
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('DOM загружен');
-            });
-        } else {
-            console.log('DOM уже загружен');
-        }
-        
-        // Глобальная обработка ошибок
-        window.addEventListener('error', function(e) {
-            console.error('Глобальная ошибка:', e.error);
-        });
-        
-        window.addEventListener('unhandledrejection', function(e) {
-            console.error('Необработанный Promise:', e.reason);
-        });
-    </script>
 </body>
 </html>
