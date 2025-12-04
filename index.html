@@ -683,11 +683,18 @@
 
     <script>
         // ==================== КОНФИГУРАЦИЯ ====================
-        // Данные берутся из config.js
-        const supabase = window.supabase.createClient(
-            window.SUPABASE_CONFIG.URL,
-            window.SUPABASE_CONFIG.KEY
-        );
+        // ПРЯМЫЕ ЗНАЧЕНИЯ
+        const SUPABASE_URL = 'https://lmysveosqckpbyuldiym.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteXN2ZW9zcWNrcGJ5dWxkaXltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTMxNTksImV4cCI6MjA4MDM4OTE1OX0.z1i_Fi7uCXnX3cml7RbTHR6RxIrxVY947iOCTi80fQY';
+        
+        // Инициализация Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true
+            }
+        });
         
         // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
         let currentUser = null;
