@@ -11,145 +11,132 @@ let currentPage = 1;
 const itemsPerPage = 50;
 let searchTimeout = null;
 
-// Инициализация Supabase
-let supabase;
-
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
 // Показ/скрытие загрузчика
 function showLoader(show, message = '') {
-    const loader = document.getElementById('dataLoader');
-    if (!loader) return;
-    
-    if (show) {
-        loader.style.display = 'block';
-        if (message) {
-            const messageEl = loader.querySelector('div:last-child');
-            if (messageEl) {
-                messageEl.textContent = message;
-            }
+    try {
+        const loader = document.getElementById('dataLoader');
+        if (!loader) {
+            console.warn('Элемент загрузчика не найден');
+            return;
         }
-    } else {
-        loader.style.display = 'none';
+        
+        if (show) {
+            loader.style.display = 'block';
+            if (message) {
+                const messageEl = loader.querySelector('div:last-child');
+                if (messageEl) {
+                    messageEl.textContent = message;
+                }
+            }
+        } else {
+            loader.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Ошибка в showLoader:', error);
     }
 }
 
 // Показ сообщений
 function showAlert(message, type, element = null) {
-    const alertEl = element || document.getElementById('mainAlert');
-    if (!alertEl) return;
-    
-    alertEl.className = `alert alert-${type}`;
-    alertEl.innerHTML = message;
-    alertEl.style.display = 'block';
-    
-    if (!element) {
-        setTimeout(() => {
-            alertEl.style.display = 'none';
-        }, 5000);
+    try {
+        const alertEl = element || document.getElementById('mainAlert');
+        if (!alertEl) {
+            console.warn('Элемент для алерта не найден');
+            return;
+        }
+        
+        alertEl.className = `alert alert-${type}`;
+        alertEl.innerHTML = message;
+        alertEl.style.display = 'block';
+        
+        if (!element) {
+            setTimeout(() => {
+                alertEl.style.display = 'none';
+            }, 5000);
+        }
+    } catch (error) {
+        console.error('Ошибка в showAlert:', error);
     }
 }
 
 // Обновление UI пользователя
 function updateUserUI() {
-    if (!currentUser) return;
-    
-    const name = currentUser.full_name || currentUser.email.split('@')[0];
-    const avatarLetter = name.charAt(0).toUpperCase();
-    
-    document.getElementById('userName').textContent = name;
-    document.getElementById('userRole').textContent = 
-        userRole === 'admin' ? 'Администратор' : `Бармен (Бар ${userBar})`;
-    document.getElementById('userAvatar').textContent = avatarLetter;
+    try {
+        if (!currentUser) return;
+        
+        const name = currentUser.full_name || currentUser.email.split('@')[0];
+        const avatarLetter = name.charAt(0).toUpperCase();
+        
+        const userNameEl = document.getElementById('userName');
+        const userRoleEl = document.getElementById('userRole');
+        const userAvatarEl = document.getElementById('userAvatar');
+        
+        if (userNameEl) userNameEl.textContent = name;
+        if (userRoleEl) {
+            userRoleEl.textContent = userRole === 'admin' 
+                ? 'Администратор' 
+                : `Бармен (Бар ${userBar})`;
+        }
+        if (userAvatarEl) userAvatarEl.textContent = avatarLetter;
+    } catch (error) {
+        console.error('Ошибка в updateUserUI:', error);
+    }
 }
 
 // Показать экран входа
 function showLoginScreen() {
-    const loginScreen = document.getElementById('loginScreen');
-    const mainScreen = document.getElementById('mainScreen');
-    const appHeader = document.getElementById('appHeader');
-    
-    if (loginScreen) loginScreen.style.display = 'block';
-    if (mainScreen) mainScreen.style.display = 'none';
-    if (appHeader) appHeader.style.display = 'none';
-    
-    // Очистка полей
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    if (emailInput) emailInput.value = '';
-    if (passwordInput) passwordInput.value = '';
+    try {
+        const loginScreen = document.getElementById('loginScreen');
+        const mainScreen = document.getElementById('mainScreen');
+        const appHeader = document.getElementById('appHeader');
+        
+        if (loginScreen) loginScreen.style.display = 'block';
+        if (mainScreen) mainScreen.style.display = 'none';
+        if (appHeader) appHeader.style.display = 'none';
+        
+        // Очистка полей
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        if (emailInput) emailInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+    } catch (error) {
+        console.error('Ошибка в showLoginScreen:', error);
+    }
 }
 
 // Показать основной интерфейс
 function showMainInterface() {
-    const loginScreen = document.getElementById('loginScreen');
-    const mainScreen = document.getElementById('mainScreen');
-    const appHeader = document.getElementById('appHeader');
-    const controlPanel = document.getElementById('controlPanel');
-    const actionsHeader = document.getElementById('actionsHeader');
-    
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainScreen) mainScreen.style.display = 'block';
-    if (appHeader) appHeader.style.display = 'flex';
-    
-    // Показываем/скрываем панель управления для админа
-    if (controlPanel && actionsHeader) {
-        if (userRole === 'admin') {
-            controlPanel.style.display = 'flex';
-            actionsHeader.innerHTML = 'Действия';
-        } else {
-            controlPanel.style.display = 'none';
-            actionsHeader.innerHTML = '';
+    try {
+        const loginScreen = document.getElementById('loginScreen');
+        const mainScreen = document.getElementById('mainScreen');
+        const appHeader = document.getElementById('appHeader');
+        const controlPanel = document.getElementById('controlPanel');
+        const actionsHeader = document.getElementById('actionsHeader');
+        
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (mainScreen) mainScreen.style.display = 'block';
+        if (appHeader) appHeader.style.display = 'flex';
+        
+        // Показываем/скрываем панель управления для админа
+        if (controlPanel && actionsHeader) {
+            if (userRole === 'admin') {
+                controlPanel.style.display = 'flex';
+                actionsHeader.innerHTML = 'Действия';
+            } else {
+                controlPanel.style.display = 'none';
+                actionsHeader.innerHTML = '';
+            }
         }
+        
+        loadData();
+    } catch (error) {
+        console.error('Ошибка в showMainInterface:', error);
     }
-    
-    loadData();
 }
 
 // ==================== АВТОРИЗАЦИЯ ====================
-
-// Инициализация приложения
-async function initApp() {
-    showLoader(true, 'Проверка авторизации...');
-    
-    try {
-        // Инициализируем Supabase
-        const config = window.SUPABASE_CONFIG;
-        if (!config || !config.url || !config.anonKey) {
-            throw new Error('Конфигурация Supabase не найдена');
-        }
-        
-        supabase = window.supabase.createClient(
-            config.url,
-            config.anonKey,
-            {
-                auth: {
-                    autoRefreshToken: true,
-                    persistSession: true,
-                    detectSessionInUrl: true
-                }
-            }
-        );
-        
-        // Проверяем сессию
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) throw error;
-        
-        if (session && session.user) {
-            await loadUserProfile(session.user.id);
-            showMainInterface();
-        } else {
-            showLoginScreen();
-        }
-    } catch (error) {
-        console.error('Ошибка инициализации:', error);
-        showAlert('❌ Ошибка загрузки приложения', 'error');
-        showLoginScreen();
-    } finally {
-        showLoader(false);
-    }
-}
 
 // Загрузка профиля пользователя
 async function loadUserProfile(userId) {
@@ -187,10 +174,10 @@ async function loadUserProfile(userId) {
 
 // Создание профиля пользователя
 async function createUserProfile(userId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
         // Проверяем, первый ли это пользователь
         const { count } = await supabase
             .from('user_profiles')
@@ -219,6 +206,54 @@ async function createUserProfile(userId) {
     }
 }
 
+// Инициализация приложения
+async function initApp() {
+    showLoader(true, 'Проверка авторизации...');
+    
+    try {
+        // Проверяем конфигурацию
+        if (!window.SUPABASE_CONFIG || !window.SUPABASE_CONFIG.url || !window.SUPABASE_CONFIG.anonKey) {
+            throw new Error('Конфигурация Supabase не найдена');
+        }
+        
+        // Инициализируем Supabase
+        const { createClient } = window.supabase;
+        window.supabaseClient = createClient(
+            window.SUPABASE_CONFIG.url,
+            window.SUPABASE_CONFIG.anonKey,
+            {
+                auth: {
+                    autoRefreshToken: true,
+                    persistSession: true,
+                    detectSessionInUrl: true
+                }
+            }
+        );
+        
+        // Проверяем сессию
+        const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+        
+        if (error) {
+            console.error('Ошибка получения сессии:', error);
+            showLoginScreen();
+            return;
+        }
+        
+        if (session && session.user) {
+            await loadUserProfile(session.user.id);
+            showMainInterface();
+        } else {
+            showLoginScreen();
+        }
+    } catch (error) {
+        console.error('Ошибка инициализации:', error);
+        showAlert('❌ Ошибка загрузки приложения: ' + error.message, 'error');
+        showLoginScreen();
+    } finally {
+        showLoader(false);
+    }
+}
+
 // Вход в систему
 async function handleLogin(email, password) {
     const btn = document.getElementById('loginBtn');
@@ -236,7 +271,7 @@ async function handleLogin(email, password) {
     btn.innerHTML = '<div class="loader-spinner" style="width: 20px; height: 20px; border-width: 2px; margin: 0 auto;"></div> Вход...';
     
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({
             email: email.trim(),
             password: password
         });
@@ -280,7 +315,7 @@ async function logout() {
     try {
         if (!confirm('Вы уверены, что хотите выйти?')) return;
         
-        await supabase.auth.signOut();
+        await window.supabaseClient.auth.signOut();
         currentUser = null;
         userRole = null;
         userBar = null;
@@ -300,13 +335,13 @@ async function logout() {
 
 // Загрузка данных
 async function loadData() {
-    if (!currentUser) return;
+    if (!currentUser || !window.supabaseClient) return;
     
     showLoader(true, 'Загрузка данных...');
     
     try {
         // Загружаем категории
-        const { data: cats, error: catError } = await supabase
+        const { data: cats, error: catError } = await window.supabaseClient
             .from('categories')
             .select('*')
             .order('order_index');
@@ -315,7 +350,7 @@ async function loadData() {
         categories = cats || [];
         
         // Загружаем продукты
-        const { data: prods, error: prodError } = await supabase
+        const { data: prods, error: prodError } = await window.supabaseClient
             .from('products')
             .select('*')
             .order('category_id')
@@ -440,6 +475,8 @@ function updateStats() {
 
 // Обновление остатков
 async function updateStock(productId, field, value) {
+    if (!window.supabaseClient) return;
+    
     const numericValue = parseFloat(value) || 0;
     
     // Проверка прав для барменов
@@ -457,7 +494,7 @@ async function updateStock(productId, field, value) {
     }
     
     try {
-        const { error } = await supabase
+        const { error } = await window.supabaseClient
             .from('products')
             .update({ 
                 [field]: numericValue,
@@ -557,6 +594,8 @@ function closeAddModal() {
 
 // Добавление категории
 async function addCategory() {
+    if (!window.supabaseClient) return;
+    
     const nameInput = document.getElementById('categoryName');
     const orderInput = document.getElementById('categoryOrder');
     
@@ -571,7 +610,7 @@ async function addCategory() {
     }
     
     try {
-        const { error } = await supabase
+        const { error } = await window.supabaseClient
             .from('categories')
             .insert([{
                 name: name,
@@ -591,6 +630,8 @@ async function addCategory() {
 
 // Добавление продукта
 async function addProduct() {
+    if (!window.supabaseClient) return;
+    
     const categorySelect = document.getElementById('productCategory');
     const nameInput = document.getElementById('productName');
     const volumeInput = document.getElementById('productVolume');
@@ -612,7 +653,7 @@ async function addProduct() {
     }
     
     try {
-        const { error } = await supabase
+        const { error } = await window.supabaseClient
             .from('products')
             .insert([{
                 category_id: parseInt(categoryId),
@@ -635,10 +676,12 @@ async function addProduct() {
 
 // Удаление продукта
 async function deleteProduct(productId) {
+    if (!window.supabaseClient) return;
+    
     if (!confirm('Удалить этот продукт?')) return;
     
     try {
-        const { error } = await supabase
+        const { error } = await window.supabaseClient
             .from('products')
             .delete()
             .eq('id', productId);
@@ -705,15 +748,19 @@ async function exportData() {
         csv += `"${category?.name || ''}";"${product.name}";${product.volume};${product.bar1 || 0};${product.bar2 || 0}\n`;
     });
     
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `fullerpub_stock_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showAlert('✅ Файл CSV скачан', 'success');
+    try {
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `fullerpub_stock_${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showAlert('✅ Файл CSV скачан', 'success');
+    } catch (error) {
+        showAlert('❌ Ошибка экспорта данных', 'error');
+    }
 }
 
 // Настройка поиска
@@ -751,9 +798,9 @@ function setupSearch() {
     });
 }
 
-// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+// ==================== ГЛОБАЛЬНЫЕ ФУНКЦИИ ====================
 
-// Глобальные функции для вызова из HTML
+// Экспортируем функции в глобальную область видимости
 window.logout = logout;
 window.openAddModal = openAddModal;
 window.closeAddModal = closeAddModal;
@@ -766,16 +813,25 @@ window.updateStock = updateStock;
 window.addCategory = addCategory;
 window.addProduct = addProduct;
 
-// Инициализация при загрузке страницы
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+
+// Обработчик загрузки страницы
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен, инициализация приложения...');
+    
     // Обработчик формы входа
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('email')?.value;
+            const password = document.getElementById('password')?.value;
+            
+            if (!email || !password) {
+                showAlert('❌ Заполните все поля', 'error', document.getElementById('loginAlert'));
+                return;
+            }
             
             await handleLogin(email, password);
         });
@@ -791,15 +847,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Обработчик клавиши Escape для закрытия модальных окон
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+    });
+    
     // Инициализация приложения
-    initApp();
+    setTimeout(() => {
+        initApp();
+    }, 100);
     
     // Автообновление каждые 5 минут
     setInterval(() => {
         if (currentUser && !document.hidden) {
             loadData();
         }
-    }, 300000); // 5 минут
+    }, 300000);
     
     // Обновление при возвращении на вкладку
     document.addEventListener('visibilitychange', () => {
@@ -807,4 +875,13 @@ document.addEventListener('DOMContentLoaded', function() {
             loadData();
         }
     });
+});
+
+// Глобальная обработка ошибок
+window.addEventListener('error', function(e) {
+    console.error('Глобальная ошибка:', e.error);
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+    console.error('Необработанный Promise:', e.reason);
 });
