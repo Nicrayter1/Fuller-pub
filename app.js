@@ -1,6 +1,6 @@
-// app.js - Основная логика приложения
+// app.js - Основной файл приложения
 
-// Глобальные переменные
+// ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 let currentUser = null;
 let userRole = null;
 let userBar = null;
@@ -13,129 +13,130 @@ let searchTimeout = null;
 
 // Инициализация Supabase
 let supabase;
-try {
-    const config = window.getSupabaseConfig();
-    if (!config.isValid()) {
-        throw new Error('Неверная конфигурация Supabase');
-    }
+
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
+// Показ/скрытие загрузчика
+function showLoader(show, message = '') {
+    const loader = document.getElementById('dataLoader');
+    if (!loader) return;
     
-    supabase = window.supabase.createClient(
-        config.url,
-        config.anonKey,
-        {
-            auth: {
-                autoRefreshToken: true,
-                persistSession: true,
-                detectSessionInUrl: true,
-                storage: window.localStorage
-            },
-            global: {
-                headers: {
-                    'X-Client-Info': 'fuller-pub/v1.0'
-                }
+    if (show) {
+        loader.style.display = 'block';
+        if (message) {
+            const messageEl = loader.querySelector('div:last-child');
+            if (messageEl) {
+                messageEl.textContent = message;
             }
         }
-    );
-} catch (error) {
-    console.error('Ошибка инициализации Supabase:', error);
-    showAlert('❌ Ошибка конфигурации приложения', 'error', true);
+    } else {
+        loader.style.display = 'none';
+    }
 }
 
-// ==================== ИНИЦИАЛИЗАЦИЯ ====================
-document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем поддержку браузером необходимых функций
-    if (!checkBrowserSupport()) return;
+// Показ сообщений
+function showAlert(message, type, element = null) {
+    const alertEl = element || document.getElementById('mainAlert');
+    if (!alertEl) return;
     
-    // Инициализируем приложение
-    initApp();
+    alertEl.className = `alert alert-${type}`;
+    alertEl.innerHTML = message;
+    alertEl.style.display = 'block';
     
-    // Настройка глобальных обработчиков
-    setupGlobalHandlers();
-    
-    // Автообновление каждые 5 минут
-    setInterval(() => {
-        if (currentUser && !document.hidden) {
-            loadData();
-        }
-    }, 300000); // 5 минут
-});
+    if (!element) {
+        setTimeout(() => {
+            alertEl.style.display = 'none';
+        }, 5000);
+    }
+}
 
-function checkBrowserSupport() {
-    const requirements = [
-        'localStorage' in window,
-        'Promise' in window,
-        'fetch' in window,
-        'URLSearchParams' in window
-    ];
+// Обновление UI пользователя
+function updateUserUI() {
+    if (!currentUser) return;
     
-    if (requirements.some(req => !req)) {
-        showAlert(
-            '❌ Ваш браузер устарел и не поддерживает необходимые функции. ' +
-            'Пожалуйста, обновите браузер или используйте современный браузер.',
-            'error',
-            true
-        );
-        return false;
+    const name = currentUser.full_name || currentUser.email.split('@')[0];
+    const avatarLetter = name.charAt(0).toUpperCase();
+    
+    document.getElementById('userName').textContent = name;
+    document.getElementById('userRole').textContent = 
+        userRole === 'admin' ? 'Администратор' : `Бармен (Бар ${userBar})`;
+    document.getElementById('userAvatar').textContent = avatarLetter;
+}
+
+// Показать экран входа
+function showLoginScreen() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainScreen = document.getElementById('mainScreen');
+    const appHeader = document.getElementById('appHeader');
+    
+    if (loginScreen) loginScreen.style.display = 'block';
+    if (mainScreen) mainScreen.style.display = 'none';
+    if (appHeader) appHeader.style.display = 'none';
+    
+    // Очистка полей
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    if (emailInput) emailInput.value = '';
+    if (passwordInput) passwordInput.value = '';
+}
+
+// Показать основной интерфейс
+function showMainInterface() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainScreen = document.getElementById('mainScreen');
+    const appHeader = document.getElementById('appHeader');
+    const controlPanel = document.getElementById('controlPanel');
+    const actionsHeader = document.getElementById('actionsHeader');
+    
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (mainScreen) mainScreen.style.display = 'block';
+    if (appHeader) appHeader.style.display = 'flex';
+    
+    // Показываем/скрываем панель управления для админа
+    if (controlPanel && actionsHeader) {
+        if (userRole === 'admin') {
+            controlPanel.style.display = 'flex';
+            actionsHeader.innerHTML = 'Действия';
+        } else {
+            controlPanel.style.display = 'none';
+            actionsHeader.innerHTML = '';
+        }
     }
     
-    return true;
-}
-
-function setupGlobalHandlers() {
-    // Обработчик закрытия модальных окон
-    window.addEventListener('click', function(event) {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
-    
-    // Обработчик клавиши Escape
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            const modals = document.querySelectorAll('.modal');
-            modals.forEach(modal => {
-                modal.style.display = 'none';
-            });
-        }
-    });
-    
-    // Обновление при возвращении на вкладку
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && currentUser) {
-            loadData();
-        }
-    });
-    
-    // Обработчик ошибок
-    window.addEventListener('error', function(e) {
-        console.error('Глобальная ошибка:', e.error);
-        if (currentUser) {
-            showAlert('⚠️ Произошла непредвиденная ошибка', 'warning');
-        }
-    });
-    
-    window.addEventListener('unhandledrejection', function(e) {
-        console.error('Необработанный Promise:', e.reason);
-        if (currentUser) {
-            showAlert('⚠️ Ошибка выполнения операции', 'warning');
-        }
-    });
+    loadData();
 }
 
 // ==================== АВТОРИЗАЦИЯ ====================
+
+// Инициализация приложения
 async function initApp() {
-    showLoader(true, 'Инициализация приложения...');
+    showLoader(true, 'Проверка авторизации...');
     
     try {
+        // Инициализируем Supabase
+        const config = window.SUPABASE_CONFIG;
+        if (!config || !config.url || !config.anonKey) {
+            throw new Error('Конфигурация Supabase не найдена');
+        }
+        
+        supabase = window.supabase.createClient(
+            config.url,
+            config.anonKey,
+            {
+                auth: {
+                    autoRefreshToken: true,
+                    persistSession: true,
+                    detectSessionInUrl: true
+                }
+            }
+        );
+        
         // Проверяем сессию
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) throw error;
         
-        if (session?.user) {
+        if (session && session.user) {
             await loadUserProfile(session.user.id);
             showMainInterface();
         } else {
@@ -150,14 +151,14 @@ async function initApp() {
     }
 }
 
+// Загрузка профиля пользователя
 async function loadUserProfile(userId) {
     try {
-        // Получаем профиль с ролью
         const { data: profile, error } = await supabase
             .from('user_profiles')
             .select(`
                 *,
-                user_roles (name, permissions)
+                user_roles (name)
             `)
             .eq('id', userId)
             .single();
@@ -166,7 +167,7 @@ async function loadUserProfile(userId) {
             // Если профиль не найден, создаем его
             if (error.code === 'PGRST116') {
                 await createUserProfile(userId);
-                return await loadUserProfile(userId); // Рекурсивно загружаем
+                return await loadUserProfile(userId);
             }
             throw error;
         }
@@ -184,12 +185,13 @@ async function loadUserProfile(userId) {
     }
 }
 
+// Создание профиля пользователя
 async function createUserProfile(userId) {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-        // Определяем роль по умолчанию
+    try {
+        // Проверяем, первый ли это пользователь
         const { count } = await supabase
             .from('user_profiles')
             .select('*', { count: 'exact', head: true });
@@ -217,7 +219,592 @@ async function createUserProfile(userId) {
     }
 }
 
-// Остальные функции (login, logout, updateStock и т.д.) 
-// будут аналогичны предыдущему коду, но с улучшенной обработкой ошибок
+// Вход в систему
+async function handleLogin(email, password) {
+    const btn = document.getElementById('loginBtn');
+    const alert = document.getElementById('loginAlert');
+    
+    if (!btn || !alert) return false;
+    
+    // Валидация
+    if (!email || !password) {
+        showAlert('❌ Заполните все поля', 'error', alert);
+        return false;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loader-spinner" style="width: 20px; height: 20px; border-width: 2px; margin: 0 auto;"></div> Вход...';
+    
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password: password
+        });
+        
+        if (error) throw error;
+        
+        // Ждем загрузки профиля
+        await loadUserProfile(data.user.id);
+        showMainInterface();
+        
+        showAlert('✅ Успешный вход! Добро пожаловать в систему.', 'success', alert);
+        return true;
+        
+    } catch (error) {
+        let message = 'Ошибка входа';
+        
+        switch (error.message) {
+            case 'Invalid login credentials':
+                message = '❌ Неверный email или пароль';
+                break;
+            case 'Email not confirmed':
+                message = '❌ Email не подтвержден. Проверьте вашу почту';
+                break;
+            case 'Too many requests':
+                message = '❌ Слишком много попыток. Попробуйте позже';
+                break;
+            default:
+                message = `❌ ${error.message}`;
+        }
+        
+        showAlert(message, 'error', alert);
+        return false;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🔑 Войти в систему</span>';
+    }
+}
 
-// ... [остальной код аналогичен предыдущему примеру] ...
+// Выход из системы
+async function logout() {
+    try {
+        if (!confirm('Вы уверены, что хотите выйти?')) return;
+        
+        await supabase.auth.signOut();
+        currentUser = null;
+        userRole = null;
+        userBar = null;
+        products = [];
+        categories = [];
+        
+        showLoginScreen();
+        showAlert('✅ Вы успешно вышли из системы', 'success');
+        
+    } catch (error) {
+        console.error('Ошибка выхода:', error);
+        showAlert('❌ Ошибка при выходе из системы', 'error');
+    }
+}
+
+// ==================== РАБОТА С ДАННЫМИ ====================
+
+// Загрузка данных
+async function loadData() {
+    if (!currentUser) return;
+    
+    showLoader(true, 'Загрузка данных...');
+    
+    try {
+        // Загружаем категории
+        const { data: cats, error: catError } = await supabase
+            .from('categories')
+            .select('*')
+            .order('order_index');
+        
+        if (catError) throw catError;
+        categories = cats || [];
+        
+        // Загружаем продукты
+        const { data: prods, error: prodError } = await supabase
+            .from('products')
+            .select('*')
+            .order('category_id')
+            .order('name');
+        
+        if (prodError) throw prodError;
+        products = prods || [];
+        
+        updateTable();
+        updateStats();
+        
+    } catch (error) {
+        console.error('Ошибка загрузки данных:', error);
+        showAlert(`❌ Ошибка загрузки: ${error.message}`, 'error');
+    } finally {
+        showLoader(false);
+    }
+}
+
+// Обновление таблицы
+function updateTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (products.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                    📭 Нет данных. Добавьте продукты через панель администратора.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Группируем продукты по категориям
+    const grouped = {};
+    products.forEach(p => {
+        if (!grouped[p.category_id]) grouped[p.category_id] = [];
+        grouped[p.category_id].push(p);
+    });
+    
+    // Сортируем категории
+    const sortedCats = [...categories].sort((a, b) => a.order_index - b.order_index);
+    
+    sortedCats.forEach(category => {
+        const catProducts = grouped[category.id] || [];
+        
+        if (catProducts.length > 0) {
+            // Заголовок категории
+            const catRow = document.createElement('tr');
+            catRow.className = 'category-row';
+            catRow.innerHTML = `<td colspan="5">${category.name}</td>`;
+            tbody.appendChild(catRow);
+            
+            // Продукты категории
+            catProducts.forEach(product => {
+                const row = document.createElement('tr');
+                const canEditBar1 = userRole === 'admin' || (userRole === 'barman' && userBar === 1);
+                const canEditBar2 = userRole === 'admin' || (userRole === 'barman' && userBar === 2);
+                
+                row.innerHTML = `
+                    <td>
+                        <strong>${product.name}</strong>
+                        ${userRole === 'admin' ? 
+                            `<button class="btn btn-sm btn-danger" 
+                                     style="margin-left: 10px; padding: 2px 8px; font-size: 12px;"
+                                     onclick="deleteProduct(${product.id})">
+                                🗑️
+                             </button>` : ''}
+                    </td>
+                    <td>${product.volume}</td>
+                    <td>
+                        <input type="number" step="0.1" 
+                               class="stock-input" 
+                               value="${product.bar1 || 0}"
+                               ${canEditBar1 ? '' : 'disabled'}
+                               onchange="updateStock(${product.id}, 'bar1', this.value)"
+                               style="${canEditBar1 ? 'border-color: #28a745;' : ''}">
+                    </td>
+                    <td>
+                        <input type="number" step="0.1"
+                               class="stock-input"
+                               value="${product.bar2 || 0}"
+                               ${canEditBar2 ? '' : 'disabled'}
+                               onchange="updateStock(${product.id}, 'bar2', this.value)"
+                               style="${canEditBar2 ? 'border-color: #28a745;' : ''}">
+                    </td>
+                    <td>
+                        ${userRole === 'admin' ? 
+                            `<button class="btn btn-sm" 
+                                     style="padding: 2px 8px;"
+                                     onclick="editProduct(${product.id})">
+                                ✏️
+                             </button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    });
+}
+
+// Обновление статистики
+function updateStats() {
+    const statProducts = document.getElementById('statProducts');
+    const statCategories = document.getElementById('statCategories');
+    const statBar1 = document.getElementById('statBar1');
+    const statBar2 = document.getElementById('statBar2');
+    
+    if (statProducts) statProducts.textContent = products.length;
+    if (statCategories) statCategories.textContent = categories.length;
+    
+    const totalBar1 = products.reduce((sum, p) => sum + (parseFloat(p.bar1) || 0), 0);
+    const totalBar2 = products.reduce((sum, p) => sum + (parseFloat(p.bar2) || 0), 0);
+    
+    if (statBar1) statBar1.textContent = totalBar1.toFixed(1);
+    if (statBar2) statBar2.textContent = totalBar2.toFixed(1);
+}
+
+// Обновление остатков
+async function updateStock(productId, field, value) {
+    const numericValue = parseFloat(value) || 0;
+    
+    // Проверка прав для барменов
+    if (userRole === 'barman') {
+        if (userBar === 1 && field !== 'bar1') {
+            showAlert('❌ Вы можете менять только значения для Бара 1', 'error');
+            loadData(); // Возвращаем старое значение
+            return;
+        }
+        if (userBar === 2 && field !== 'bar2') {
+            showAlert('❌ Вы можете менять только значения для Бара 2', 'error');
+            loadData();
+            return;
+        }
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('products')
+            .update({ 
+                [field]: numericValue,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', productId);
+        
+        if (error) throw error;
+        
+        // Обновляем локально
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            product[field] = numericValue;
+        }
+        
+        updateStats();
+        showAlert('✅ Данные сохранены', 'success');
+        
+    } catch (error) {
+        showAlert(`❌ Ошибка сохранения: ${error.message}`, 'error');
+        loadData(); // Перезагружаем данные
+    }
+}
+
+// ==================== АДМИН-ФУНКЦИИ ====================
+
+// Открытие модального окна добавления
+function openAddModal(type) {
+    if (userRole !== 'admin') return;
+    
+    const modal = document.getElementById('addModal');
+    const title = document.getElementById('addModalTitle');
+    const body = document.getElementById('addModalBody');
+    
+    if (!modal || !title || !body) return;
+    
+    if (type === 'category') {
+        title.textContent = '➕ Добавить категорию';
+        body.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Название категории</label>
+                <input type="text" class="form-control" id="categoryName" 
+                       placeholder="Например: Виски, Водка, Вино">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Порядок отображения</label>
+                <input type="number" class="form-control" id="categoryOrder" value="0">
+                <small style="color: #666; font-size: 12px;">Чем меньше число, тем выше в списке</small>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddModal()">Отмена</button>
+                <button class="btn btn-success" onclick="addCategory()">Добавить</button>
+            </div>
+        `;
+    } else {
+        title.textContent = '➕ Добавить продукт';
+        
+        let options = '<option value="">Выберите категорию</option>';
+        categories.forEach(cat => {
+            options += `<option value="${cat.id}">${cat.name}</option>`;
+        });
+        
+        body.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Категория</label>
+                <select class="form-control" id="productCategory">
+                    ${options}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Название продукта</label>
+                <input type="text" class="form-control" id="productName" 
+                       placeholder="Например: Jack Daniels, Absolut">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Объем (мл)</label>
+                <input type="number" class="form-control" id="productVolume" 
+                       placeholder="500, 700, 1000">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddModal()">Отмена</button>
+                <button class="btn btn-success" onclick="addProduct()">Добавить</button>
+            </div>
+        `;
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// Закрытие модального окна
+function closeAddModal() {
+    const modal = document.getElementById('addModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Добавление категории
+async function addCategory() {
+    const nameInput = document.getElementById('categoryName');
+    const orderInput = document.getElementById('categoryOrder');
+    
+    if (!nameInput || !orderInput) return;
+    
+    const name = nameInput.value.trim();
+    const order = orderInput.value || 0;
+    
+    if (!name) {
+        showAlert('❌ Введите название категории', 'error');
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('categories')
+            .insert([{
+                name: name,
+                order_index: parseInt(order)
+            }]);
+        
+        if (error) throw error;
+        
+        showAlert(`✅ Категория "${name}" добавлена`, 'success');
+        closeAddModal();
+        loadData();
+        
+    } catch (error) {
+        showAlert(`❌ Ошибка: ${error.message}`, 'error');
+    }
+}
+
+// Добавление продукта
+async function addProduct() {
+    const categorySelect = document.getElementById('productCategory');
+    const nameInput = document.getElementById('productName');
+    const volumeInput = document.getElementById('productVolume');
+    
+    if (!categorySelect || !nameInput || !volumeInput) return;
+    
+    const categoryId = categorySelect.value;
+    const name = nameInput.value.trim();
+    const volume = volumeInput.value;
+    
+    if (!categoryId || !name || !volume) {
+        showAlert('❌ Заполните все поля', 'error');
+        return;
+    }
+    
+    if (volume <= 0) {
+        showAlert('❌ Объем должен быть положительным числом', 'error');
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('products')
+            .insert([{
+                category_id: parseInt(categoryId),
+                name: name,
+                volume: parseInt(volume),
+                bar1: 0,
+                bar2: 0
+            }]);
+        
+        if (error) throw error;
+        
+        showAlert(`✅ Продукт "${name}" добавлен`, 'success');
+        closeAddModal();
+        loadData();
+        
+    } catch (error) {
+        showAlert(`❌ Ошибка: ${error.message}`, 'error');
+    }
+}
+
+// Удаление продукта
+async function deleteProduct(productId) {
+    if (!confirm('Удалить этот продукт?')) return;
+    
+    try {
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', productId);
+        
+        if (error) throw error;
+        
+        showAlert('✅ Продукт удален', 'success');
+        loadData();
+        
+    } catch (error) {
+        showAlert(`❌ Ошибка удаления: ${error.message}`, 'error');
+    }
+}
+
+// Редактирование продукта
+function editProduct(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    showInfoModal(
+        '✏️ Редактирование продукта',
+        `Редактирование продукта "${product.name}" будет доступно в следующей версии.`
+    );
+}
+
+// Показать информационное окно
+function showInfoModal(title, content) {
+    const titleEl = document.getElementById('infoModalTitle');
+    const bodyEl = document.getElementById('infoModalBody');
+    const modal = document.getElementById('infoModal');
+    
+    if (titleEl && bodyEl && modal) {
+        titleEl.textContent = title;
+        bodyEl.innerHTML = content;
+        modal.style.display = 'flex';
+    }
+}
+
+// Закрыть информационное окно
+function closeInfoModal() {
+    const modal = document.getElementById('infoModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Обновление данных
+function refreshData() {
+    loadData();
+    showAlert('🔄 Данные обновлены', 'success');
+}
+
+// Экспорт данных
+async function exportData() {
+    if (products.length === 0) {
+        showAlert('❌ Нет данных для экспорта', 'error');
+        return;
+    }
+    
+    let csv = 'Категория;Наименование;Объем,мл;Бар 1;Бар 2\n';
+    
+    products.forEach(product => {
+        const category = categories.find(c => c.id === product.category_id);
+        csv += `"${category?.name || ''}";"${product.name}";${product.volume};${product.bar1 || 0};${product.bar2 || 0}\n`;
+    });
+    
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `fullerpub_stock_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAlert('✅ Файл CSV скачан', 'success');
+}
+
+// Настройка поиска
+function setupSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#tableBody tr');
+        
+        rows.forEach(row => {
+            if (row.classList.contains('category-row')) {
+                // Для категорий показываем если есть видимые продукты в ней
+                const nextRows = [];
+                let nextRow = row.nextElementSibling;
+                while (nextRow && !nextRow.classList.contains('category-row')) {
+                    nextRows.push(nextRow);
+                    nextRow = nextRow.nextElementSibling;
+                }
+                
+                const hasVisibleProducts = nextRows.some(r => 
+                    r.textContent.toLowerCase().includes(searchTerm)
+                );
+                
+                row.style.display = searchTerm === '' || hasVisibleProducts ? '' : 'none';
+                
+            } else {
+                // Для продуктов
+                const isVisible = searchTerm === '' || 
+                                 row.textContent.toLowerCase().includes(searchTerm);
+                row.style.display = isVisible ? '' : 'none';
+            }
+        });
+    });
+}
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+
+// Глобальные функции для вызова из HTML
+window.logout = logout;
+window.openAddModal = openAddModal;
+window.closeAddModal = closeAddModal;
+window.closeInfoModal = closeInfoModal;
+window.refreshData = refreshData;
+window.exportData = exportData;
+window.deleteProduct = deleteProduct;
+window.editProduct = editProduct;
+window.updateStock = updateStock;
+window.addCategory = addCategory;
+window.addProduct = addProduct;
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчик формы входа
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            await handleLogin(email, password);
+        });
+    }
+    
+    // Закрытие модальных окон по клику вне окна
+    window.addEventListener('click', function(event) {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+    
+    // Инициализация приложения
+    initApp();
+    
+    // Автообновление каждые 5 минут
+    setInterval(() => {
+        if (currentUser && !document.hidden) {
+            loadData();
+        }
+    }, 300000); // 5 минут
+    
+    // Обновление при возвращении на вкладку
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && currentUser) {
+            loadData();
+        }
+    });
+});
