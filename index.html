@@ -751,19 +751,20 @@
         
         // Создание профиля при первом входе
         async function createUserProfile(userId) {
-            const { data: user } = await supabase.auth.getUser();
-            
-            if (!user) return;
-            
-            const { error } = await supabase
-                .from('user_profiles')
-                .insert([{
-                    id: userId,
-                    email: user.user.email,
-                    full_name: user.user.email.split('@')[0],
-                    role_id: 2, // По умолчанию бармен
-                    bar_number: 1
-                }]);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    const { error } = await supabase
+        .from('user_profiles')
+        .insert([{
+            id: userId,
+            email: user.email,
+            full_name: user.email.split('@')[0],
+            role_id: 2,
+            bar_number: 1
+        }]);
+}
+
             
             if (error) {
                 console.error('Ошибка создания профиля:', error);
