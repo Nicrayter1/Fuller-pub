@@ -1,3 +1,97 @@
+// app.js - Добавьте этот код в самое начало файла
+
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
+// Форматирование чисел
+function formatNumber(num, decimals = 1) {
+    const value = parseFloat(num);
+    if (isNaN(value)) return '0.0';
+    return value.toFixed(decimals);
+}
+
+// Форматирование даты
+function formatDate(dateString) {
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return dateString;
+    }
+}
+
+// Обрезка текста
+function truncateText(text, maxLength = 50) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+// Валидация email
+function isValidEmail(email) {
+    if (!email) return false;
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+// Дебаунс функция
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Копирование в буфер обмена
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (err) {
+        // Fallback для старых браузеров
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+}
+
+// Проверка является ли значением числом
+function isNumber(value) {
+    return !isNaN(parseFloat(value)) && isFinite(value);
+}
+
+// Преобразование в безопасную строку
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Генерация уникального ID
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// ... остальной код app.js
 // app.js - Основной файл приложения
 
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
