@@ -258,27 +258,32 @@ async function loadUserProfile(userId) {
 }
         
         // Устанавливаем данные
-        currentUser = profile;
-        userRole = profile.user_roles?.name || 'barman';
-        userBar = profile.bar_number || 1;
-        
-        console.log('Профиль загружен:', { currentUser, userRole, userBar });
-        
-        updateUserUI();    
-    } catch (error) {
-        console.error('Ошибка загрузки профиля:', error);
-        
-        // Если это первый пользователь, создаем админа
-        if (error.message.includes('relation "user_profiles" does not exist')) {
-            console.log('Таблица не существует, создаем первого пользователя...');
-            try {
-                await createFirstUserProfile(userId);
-                await loadUserProfile(userId);
-                return;
-            } catch (createError) {
-                console.error('Ошибка создания первого пользователя:', createError);
-            }
+currentUser = profile;
+userRole = profile.user_roles?.name || 'barman';
+userBar = profile.bar_number || 1;
+
+console.log('Профиль загружен:', { currentUser, userRole, userBar });
+
+updateUserUI();
+    
+} catch (error) {  // ← ЗДЕСЬ ПРОБЛЕМА! Перед catch должен быть } от try
+    console.error('Ошибка загрузки профиля:', error);
+    
+    // Если это первый пользователь, создаем админа
+    if (error.message.includes('relation "user_profiles" does not exist')) {
+        console.log('Таблица не существует, создаем первого пользователя...');
+        try {
+            await createFirstUserProfile(userId);
+            await loadUserProfile(userId);
+            return;
+        } catch (createError) {
+            console.error('Ошибка создания первого пользователя:', createError);
         }
+    }
+    
+    showAlert('❌ Ошибка загрузки профиля. Проверьте подключение к базе.', 'error');
+    await logout();
+}
         
         showAlert('❌ Ошибка загрузки профиля. Проверьте подключение к базе.', 'error');
         await logout();
