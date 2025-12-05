@@ -264,8 +264,7 @@ async function loadUserProfile(userId) {
         
         console.log('Профиль загружен:', { currentUser, userRole, userBar });
         
-        updateUserUI();
-        
+        updateUserUI();    
     } catch (error) {
         console.error('Ошибка загрузки профиля:', error);
         
