@@ -180,6 +180,7 @@ async function initApp() {
 // ==================== АВТОРИЗАЦИЯ ====================
 
 async function loadUserProfile(userId) {
+async function loadUserProfile(userId) {
     console.log('Загрузка профиля для:', userId);
     
     try {
@@ -187,7 +188,7 @@ async function loadUserProfile(userId) {
             throw new Error('Supabase клиент не инициализирован');
         }
         
-        // 1. Пытаемся получить профиль
+        // Пытаемся получить профиль
         const { data: profile, error } = await supabase
             .from('user_profiles')
             .select(`
@@ -201,14 +202,60 @@ async function loadUserProfile(userId) {
         
         if (error) {
             // Если таблицы нет или профиль не найден
-            if (error.code === 'PGRST116' || error.message.includes('не найден')) {
-                console.log('Профиль не найден, создаем...');
+            if (error.code === 'PGRST205' || error.code === 'PGRST116') {
+                console.log('Таблица не существует или профиль не найден');
+                
+                // Проверяем, есть ли уже пользователи
+                const { count } = await supabase
+                    .from('user_profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .catch(() => ({ count: 0 }));
+                
+                // Если это первый пользователь
+                if (count === 0 || error.code === 'PGRST205') {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        await handleFirstUser(userId, user.email);
+                        return true;
+                    }
+                }
+                
+                // Создаем обычного пользователя
                 await createUserProfile(userId);
-                // Повторная попытка
                 return await loadUserProfile(userId);
             }
             throw error;
         }
+        
+        // Устанавливаем данные
+        currentUser = profile;
+        userRole = profile.user_roles?.name || 'barman';
+        userBar = profile.bar_number || 1;
+        
+        console.log('Профиль загружен:', { currentUser, userRole, userBar });
+        
+        updateUserUI();
+        return true;
+        
+    } catch (error) {
+        console.error('Ошибка загрузки профиля:', error);
+        
+        // Пытаемся создать профиль как запасной вариант
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await handleFirstUser(userId, user.email);
+                return true;
+            }
+        } catch (createError) {
+            console.error('Не удалось создать профиль:', createError);
+        }
+        
+        showAlert('❌ Ошибка загрузки профиля. Таблицы не созданы.', 'error');
+        await logout();
+        return false;
+    }
+}
         
         // Устанавливаем данные
         currentUser = profile;
