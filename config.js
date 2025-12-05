@@ -10,8 +10,8 @@
     window.SUPABASE_CONFIG = {
         // Временные значения для разработки
         // В реальном проекте эти значения должны приходить с сервера
-        url: 'https://lmysveosqckpbyuldiym.supabase.co',
-        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteXN2ZW9zcWNrcGJ5dWxkaXltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MTMxNTksImV4cCI6MjA4MDM4OTE1OX0.z1i_Fi7uCXnX3cml7RbTHR6RxIrxVY947iOCTi80fQY'
+        url: 'https://=.supabase.co',
+        anonKey: ''
     };
     
     // Предупреждение в консоль
